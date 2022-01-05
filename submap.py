@@ -2,6 +2,8 @@ from grid2d import Grid2D
 import numpy as np
 import pandas as pd
 import os
+import pickle 
+import zstandard
 
 class Submap:
     def __init__(self, pose, grid_res, grid_alpha):
@@ -14,7 +16,8 @@ class Submap:
         self.node_ids = []
         self.frame_ids = []
         self.local_insertion_poses = None
-    
+        self.iscompressed = False
+        
     def search(self, frame, search_space, count_once = True):
         return self.grid.search(frame, search_space, count_once=count_once)
     
@@ -30,3 +33,19 @@ class Submap:
                 self.local_insertion_poses = np.concatenate((self.local_insertion_poses, pose.reshape(1,3)), axis = 0)
         else:
             print("Submap update is finished. Not inserting ")
+            
+    def finish(self):
+        self.finished = True
+        self.compress_data()
+    
+    def compress_data(self):
+        cctx = zstandard.ZstdCompressor()
+        self.grid = pickle.dumps(self.grid)
+        self.grid = cctx.compress(self.grid)
+        self.iscompressed = True
+        
+    def decompress_data(self):
+        dctx = zstandard.ZstdDecompressor()
+        self.grid = dctx.decompress(self.grid)
+        self.grid = pickle.loads(self.grid)
+        self.iscompressed = False

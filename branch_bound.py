@@ -56,7 +56,7 @@ def hierarchical_search(hgrids,pose_estimate, frame, x_search_window,
         best_normalized_score = scores[best]/len(frame)
         #print(f"Score for {i}th grid is {best_normalized_score}")
         if best_normalized_score < score_th:
-            print(f"Score below thresold {score_th} score :{best_normalized_score}")
+#             print(f"Score below thresold {score_th} score :{best_normalized_score}")
             return None
         best_pose = search_space[best]
         if debug:
