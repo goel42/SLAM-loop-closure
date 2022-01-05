@@ -5,7 +5,6 @@ import numba
 from grid2d import Grid2D
 from ati.slam.yelli import utils, grid
 
-
 #@numba.njit(fastmath=True, parallel=True)
 def compute_hierarchical_grid(grid2d, num_levels):
     hgrids=[]
@@ -39,8 +38,9 @@ def compute_half_res_grid(half_res_grid, full_res_grid):
             #    break
     return half_res_grid
 
+
 def hierarchical_search(hgrids,pose_estimate, frame, x_search_window,
-                        y_search_window, angle_search_window, max_range=60, score_th = 0.2, debug = False):
+                        y_search_window, angle_search_window, count_once, max_range=60, score_th = 0.2, debug=False):
     best_pose = pose_estimate
     for i in reversed(range(len(hgrids))):
         grid = hgrids[i]
@@ -51,13 +51,19 @@ def hierarchical_search(hgrids,pose_estimate, frame, x_search_window,
         
         search_space = utils.grid_space(best_pose, 
                                         x_search_window, y_search_window, angle_search_window, num_x, num_y, num_t)
-        scores = grid.search(frame, search_space, count_once=False)
-        best = np.argmax(scores)
-        best_normalized_score = scores[best]/len(frame)
+        if count_once:
+            scores, num_visited = grid.search(frame, search_space, count_once=True)
+            best = np.argmax(scores)
+            best_normalized_score = scores[best]/num_visited[best]
+        else:
+            scores = grid.search(frame, search_space, count_once=False)
+            best = np.argmax(scores)
+            best_normalized_score = scores[best]/len(frame)
         #print(f"Score for {i}th grid is {best_normalized_score}")
         if best_normalized_score < score_th:
-#             print(f"Score below thresold {score_th} score :{best_normalized_score}")
-            return None
+            if debug:
+                print(f"Score below thresold {score_th} score :{best_normalized_score}")
+            return None, best_normalized_score
         best_pose = search_space[best]
         if debug:
             print(f"For {i}th grid num_x:{num_x}, num_y:{num_y}, num_t:{num_t} , grid_res {grid.grid_res}, anguler res {angular_res}")
@@ -69,6 +75,5 @@ def hierarchical_search(hgrids,pose_estimate, frame, x_search_window,
         x_search_window = (-grid.grid_res, grid.grid_res)
         y_search_window = (-grid.grid_res, grid.grid_res)
         angle_search_window = (-angular_res,angular_res)
-    return best_pose
-        
+    return best_pose,best_normalized_score 
 #%time gs = compute_hierarchical_grid(smap.grid, num_levels=8)

@@ -91,9 +91,10 @@ def search_fastv2(grid, grid_origin, poses, frame, grid_res):
 @numba.njit(fastmath=True, parallel=True)
 def search_fast_count_once(grid, grid_origin, poses, frame, grid_res):
     scores = np.zeros(poses.shape[0])
+    num_visited = np.zeros(poses.shape[0])
     for i in numba.prange(poses.shape[0]):
-        scores[i] = score_function_count_once(grid, grid_origin, poses[i, :], frame, grid_res)
-    return scores
+        scores[i], num_visited[i] = score_function_count_once(grid, grid_origin, poses[i, :], frame, grid_res)
+    return scores, num_visited
 
 
 @numba.njit(fastmath=True)
@@ -111,10 +112,10 @@ def score_function_count_once(grid, grid_origin, pose, frame, grid_res):
         if (ix,iy) in visited:
             continue
         if (ix >= 0) and (ix < grid.shape[0]) and (iy >= 0) and (iy < grid.shape[1]):
-            score += grid[ix, iy]
+            score += prob_from_odds(grid[ix, iy])
         visited.add((ix,iy))
 
-    return score
+    return score, len(visited)
 
 @numba.njit(fastmath=True)
 def score_function(grid, grid_origin, pose, frame, grid_res):
@@ -135,6 +136,13 @@ def score_function(grid, grid_origin, pose, frame, grid_res):
 
     return score
 
+@numba.jit(nopython = True)
+def odds(probability):
+    return probability/(1-probability)
+
+@numba.jit(nopython = True)
+def prob_from_odds(odds_val):
+    return odds_val/(1+ odds_val)
 
 
 #%timeit sc=search_fast_count_once(active_submaps[0].grid.grid, active_submaps[0].grid.origin, search_space, frame_z, active_submaps[0].grid.grid_res )
