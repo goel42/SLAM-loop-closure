@@ -1,3 +1,6 @@
+import sys
+sys.path.append("/home/anujraaj/robo/SLAM-loop-closure/src/")
+
 from grid2d import Grid2D
 import numpy as np
 import pandas as pd
